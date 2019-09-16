@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# Copyright year HaoyangWang haoyangw@bu.edu
 """
 Created on Mon Sep  9 15:12:13 2019
 
@@ -22,7 +23,7 @@ def is_happy(x):
 
 def product_of_positives(seq):
   """return the product of all the positive numbers in the sequence seq"""
-  r=0
+  r=1
   for i in range(0,len(seq)):
       if seq[i]>0:
           r*= seq[i]
@@ -33,7 +34,7 @@ def proper_divisors(n):
     for i in range(1,n):
         if(n%i==0):
             r.append(i)
-    return r
+    return tuple(r)
 """return all proper divisors of n in a tuple and in numerical order"""
 
 if __name__ == '__main__':

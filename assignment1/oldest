@@ -1,35 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Sep  9 16:13:14 2019
+# Copyright year HaoyangWang haoyangw@bu.edu
 
-@author: haoyangw@bu.edu
-"""
 
-import sys
-from os import listdir,stat
-if __name__ == '__main__':
+from sys import argv
+from os import listdir, stat
+
 	# your test code here.
-    dirInfoList = listdir()
-    fileList = []
-    for i in range(0,len(dirInfoList)):
-        fileList.append([stat(dirInfoList[i]).st_mtime,dirInfoList[i]])
-    fileList.sort(key=lambda x:x[0])
-    #sort: https://www.programiz.com/python-programming/methods/list/sort
-    #lambda: https://www.cnblogs.com/evening/archive/2012/03/29/2423554.html
-    #listdir: https://blog.csdn.net/chengxuyuanyonghu/article/details/51210281
-    try:
-        if len(sys.argv) > 1:
-            for i in range(0,int(sys.argv[1])):
-                print(fileList[i][1])
-        else:
-            print("please input a number!")
-    except TypeError:
-        print("error:input error!")
-    except IndexError:
-        print("-----------------------END------------------------------")
-        print("error: There are only " + str(len(dirInfoList)) + " files in dictionary")
-    #print(sys.argv)
-    #print(dirInfoList)
-    #print(fileList)
-    pass
+dirInfoList = listdir()
+fileList = []
+for i in range(0,len(dirInfoList)):
+    fileList.append([stat(dirInfoList[i]).st_mtime,dirInfoList[i]])
+fileList.sort(key=lambda x:x[0])
+#sort: https://www.programiz.com/python-programming/methods/list/sort
+#lambda: https://www.cnblogs.com/evening/archive/2012/03/29/2423554.html
+#listdir: https://blog.csdn.net/chengxuyuanyonghu/article/details/51210281
+try:
+    if len(argv) > 1:
+        for i in range(0,int(argv[1])):
+            print(fileList[i][1])
+    else:
+        print("please input a number!")
+except TypeError:
+    print("error:input error!")
+except IndexError:
+    print("-----------------------END------------------------------")
+    print("error: There are only " + str(len(dirInfoList)) + " files in this dictionary")
+#print(dirInfoList)
+#print(fileList)
