@@ -1,3 +1,4 @@
+//Copyright 2019 haoyangWang haoyangw@bu.edu
 #include <iostream>
 #include <vector>
 #include <string>
@@ -70,9 +71,6 @@ int main(int argc, char **argv){
     }
     closedir(directory);
     quick_sort(fileinfoArray,fileinfoArray.size());
-    /*for (size_t i = 0; i < fileinfoArray.size(); i++){
-        std::cout<< fileinfoArray[i].fileName<<":"<<fileinfoArray[i].mtime<<"\n";
-    }*/
     
     try
     {
