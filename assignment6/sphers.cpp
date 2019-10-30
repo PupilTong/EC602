@@ -2,6 +2,7 @@
 #include <string>
 #include <math.h>
 #include <vector>
+#define EasyWay
 using std::string;
 using std::vector;
 using namespace std;
@@ -47,6 +48,7 @@ class Vector3D{
             return _x*_x + _y*_y + _z*_z;
         }
 };
+#ifndef EasyWay
 class Matrix3x3{
     private:
         vector<vector<double>> _data;
@@ -140,7 +142,7 @@ class Matrix3x3{
 
         }
 };
-
+#endif
 class Ball{
 private:
 public:
@@ -201,6 +203,7 @@ public:
         _life--;
         y._life--;
     }
+#ifndef EasyWay
     void ContainerCollision(){
         auto linearlyIndependent = vector<Vector3D>();
         linearlyIndependent.resize(3);
@@ -229,6 +232,14 @@ public:
         _v = linearlyIndependentGroup * solve;
         _life = _life - 1;
     }
+#else
+    void ContainerCollision(){
+        auto y = Vector3D(0 ,0 ,0);
+        auto temp_v   = _v    - (_s  *  (2 * ( (_v*_s) / (_s*_s))));
+        _v = temp_v;
+        _life--;
+    }
+#endif
     ///Calcuate Collision time of this ball and conatiner in specific radius
     double PredictContainerCollision(double containerRadius){
         auto container = Ball("container");
@@ -236,7 +247,7 @@ public:
         return PredictCollision(*this, container,true);
     }
     ///Calcuate Collision time of two balls
-    static double PredictCollision(Ball x, Ball y,bool isContainer=false){
+    static double PredictCollision(Ball& x, Ball& y,bool isContainer=false){
         double a = (x._v - y._v).Pow2();
         double b = 2 * ((x._v - y._v) * (x._s - y._s));
         double c = (x._s - y._s).Pow2() - ((x._r+ y._r)*(x._r+ y._r));
@@ -249,15 +260,12 @@ public:
             t1 = (-b + sqrt(b2mines4ac)) /(2*a);
             t2 = (-b - sqrt(b2mines4ac)) /(2*a);
             //t2 < t1
-            if(t1 < 0){//t2 < t1 < 0
+            if(t1 < 0&& t2 < 0){
                 return -1;//no answer
             }
-            else if (t2 < 0){
-                return t1;
-            }
-            else{
-                return t2;
-            }
+            if(t1<=0)t1=t2+1;
+            if(t2<=0)t2=t1+1;
+            return t1<t2?t1:t2;
         }
     }
     void PrintOutInfo(){
@@ -268,7 +276,7 @@ vector<vector<double>> timeTable;
 int InitTimeTable(vector<Ball>& balls,int number,int containerR){
     timeTable = vector<vector<double>>();
     timeTable.resize(number);
-    for(int i=0;i<number;i++)timeTable[i].resize(number);
+    for(int i=0;i<number;i++)timeTable[i].resize(i+1);
     for (int i = 0; i < number; i++){
         for (int j = 0; j < number; j++){
             if(i<j)continue;
@@ -385,29 +393,39 @@ int main(void){
 
     InitTimeTable(inputedBalls,inputedBalls.capacity(),conatinerR);
     GetNextBallsCollTime(inputedBalls.capacity(),eventBallB,eventBallA,nextEventTimeSpan);
-    do
-    {
+    while (nextEventTimeSpan > 0){
         currentTime += nextEventTimeSpan;
         MoveAll(inputedBalls, nextEventTimeSpan);
+        //===========================================================================
         if(eventBallA==eventBallB){
             inputedBalls.at(eventBallA).ContainerCollision();
         }
         else{
             inputedBalls.at(eventBallA).Collision(inputedBalls.at(eventBallB));
         }
+        //===========================================================================
         TimePass(nextEventTimeSpan,inputedBalls.capacity(),inputedBalls.capacity());
+        //===========================================================================
         if(eventBallA!=eventBallB){
             UpdateTimeTable(inputedBalls,eventBallA,inputedBalls.capacity(),conatinerR);
         }
         UpdateTimeTable(inputedBalls,eventBallB,inputedBalls.capacity(),conatinerR);
+        //===========================================================================
+
         cout<< "time of event: " << currentTime << endl;
-        cout<< "colliding " << inputedBalls.at(eventBallA)._name << " " << inputedBalls.at(eventBallB)._name<<endl;
+        //===========================================================================
+        if(eventBallA!=eventBallB){
+            cout<< "colliding " << inputedBalls.at(eventBallA)._name << " " << inputedBalls.at(eventBallB)._name<<endl;
+        }else{
+            cout<< "colliding " << inputedBalls.at(eventBallA)._name << " " << "container"<<endl;
+        }
+        //===========================================================================
         inputedBalls.at(eventBallA).PrintOutInfo();
         inputedBalls.at(eventBallB).PrintOutInfo();
         cout << "energy: "<<GetSystemEnergy(inputedBalls)<<endl;
         auto momentum = GetSystemMomentum(inputedBalls);
         cout <<"momentum: ("<<momentum._x <<"," <<momentum._y <<"," <<momentum._z <<")"<<endl;
         GetNextBallsCollTime(inputedBalls.capacity(),eventBallB,eventBallA,nextEventTimeSpan);
-    } while (nextEventTimeSpan > 0);
+    }
     
 }
