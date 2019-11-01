@@ -1,4 +1,3 @@
-// Copyright 2019 haoyangw haoyangw@bu.edu
 #include <string>
 #include <vector>
 using std::vector;

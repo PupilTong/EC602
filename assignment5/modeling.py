@@ -1,4 +1,3 @@
-#Copyright 2019 haoyangw haoyangw@bu.edu
 class Polynomial(dict):
 
     def __init__(self, data=[]):

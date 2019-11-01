@@ -1,5 +1,3 @@
-//Copyright 2019 haoyangw haoyangw@bu.edu
-//Copyright 2019 kefanzhang kefan29@bu.edu
 
 double largest_double(){
     double r;

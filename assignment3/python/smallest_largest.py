@@ -1,5 +1,3 @@
-# Copyright 2019 haoyangwang haoyangw@bu.edu
-# Copyright 2019 KefanZhang kefan29@bu.edu
     #https://www.technical-recipes.com/2012/converting-between-binary-and-decimal-representations-of-ieee-754-floating-point-numbers-in-c/
     #https://docs.python.org/2/library/struct.html
 def largest_double():

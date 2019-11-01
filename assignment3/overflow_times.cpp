@@ -1,4 +1,3 @@
-//copyright 2019 haoyangw haoyangw@bu.edu
 #include <iostream>
 #include <cstdint>
 #include <ctime>

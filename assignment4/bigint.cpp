@@ -1,4 +1,3 @@
-// Copyright 2019 haoyangw haoyangw@bu.edu
 #include <string>
 using std::string;
 class StringIntenger:public string{

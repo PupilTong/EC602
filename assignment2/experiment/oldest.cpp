@@ -1,4 +1,3 @@
-//Copyright 2019 haoyangWang haoyangw@bu.edu
 #include <iostream>
 #include <vector>
 #include <string>

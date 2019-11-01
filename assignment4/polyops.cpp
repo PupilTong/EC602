@@ -1,4 +1,3 @@
-//Copyright 2019 haoyangw haoyangw@bu.edu
 #include <vector>
 using std::vector;
 ///return:{result,carry out}

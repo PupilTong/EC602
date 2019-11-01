@@ -1,4 +1,3 @@
-#Copyright 2019 haoyangw haoyangw@bu.edu
 import numpy as np
 
 x = np.array(input().split(),dtype=float)

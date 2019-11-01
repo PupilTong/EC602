@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright year HaoyangWang haoyangw@bu.edu
 """
 Created on Mon Sep  9 15:12:13 2019
 

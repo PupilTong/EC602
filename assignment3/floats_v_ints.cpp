@@ -1,4 +1,3 @@
-//Copyright 2019 haoyangw haoyangw@bu.edu
 // Definitions:
 // Rs = factor by which float is better than int at representing small numbers
 // Rm = factor by which float is better than int at representing large numbers
