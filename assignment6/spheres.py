@@ -6,6 +6,7 @@ class Ball:
     _r = 0
     _m = 0
     _life = 0
+    _bounces = 0
     _name = ""
     def __init__(self,x,y,z,vx,vy,vz,r,m,name,life):
         self._s = np.array([x,y,z])
@@ -25,12 +26,12 @@ class Ball:
         temp_y_v = y._v    - ((y._s-self._s) * ( ((2*self._m)/ (self._m+y._m)) * ( np.dot(y._v-self._v,y._s-self._s) / np.dot(y._s-self._s,y._s-self._s)) ))
         self._v = temp_v
         y._v = temp_y_v
-        self._life-=1
-        y._life-=1
+        y._bounces+=1
+        self._bounces+=1
     pass
     def ContainerCollision(self):
         self._v   = self._v    - (self._s  *  (2 * ( np.dot(self._v,self._s) / np.dot(self._s,self._s))))
-        self._life -=1
+        self._bounces +=1
     pass
     #Calcuate Collision time of this ball and containerR in specific radius
     def PredictContainerCollision(self, containerRadius):
@@ -43,7 +44,7 @@ class Ball:
         b = float(2 * np.dot(x._v - y._v,x._s - y._s))
         c = float(np.sum(np.power(x._s - y._s,2)) - (x._r+ y._r)**2)
         b2mines4ac = b*b - 4*a*c
-        if (b > 0 and (not isContainer)) or b2mines4ac < 0 or a == 0 :
+        if (b >= 0 and (not isContainer)) or b2mines4ac < 0 or a == 0 :
             return -1
         else:
             t1 = (-b + b2mines4ac**0.5) /(2*a)
@@ -60,7 +61,7 @@ class Ball:
             else:
                 return t2
     def PrintOutInfo(self):
-        print(" m=" + str(self._m) + " R=" + str(self._r) + " p=" + str(tuple(self._s)) + "v=" + str(tuple(self._v)))
+        print(self._name, " ", " m=" + str(self._m) + " R=" + str(self._r) + " p=" + str(tuple(self._s)) + "v=" + str(tuple(self._v)),"bounces=",str(self._bounces))
     
     
 
@@ -80,7 +81,7 @@ pass
 
 def UpdateTimeTable(balls,ballIndex,containerR):
     for i in range(balls.__len__()):
-        if balls[i]._life<=0:
+        if balls[i]._life<=0 or balls[ballIndex]._life<=0:
             if i<ballIndex:
                 timeTable[str(ballIndex)+str(i)]=-1
             else:
@@ -201,6 +202,23 @@ def mainStep():
     ##containerR = 120
 
 
+    print("")
+    print("Here are the initial conditions.")
+    print("universe radius ", str(containerR))
+    print("max collisions " ,str(maxBounceTime))
+    for b in inputedBalls:
+        b.PrintOutInfo()
+
+    print("energy: ",str(GetSystemEnergy(inputedBalls)))
+    momentum = GetSystemMomentum(inputedBalls)
+    print("momentum: " ,str(momentum))
+    print("")
+    print("Here are the events.")
+    print("")
+
+
+
+
 
     InitTimeTable(inputedBalls,containerR)
     GetNextBallsCollTime(inputedBalls.__len__(),nextColl)
@@ -212,25 +230,51 @@ def mainStep():
         else:
             inputedBalls[nextColl["eventBallA"]].Collision(inputedBalls[nextColl["eventBallB"]])
         #===========================================================================
-        TimePass(nextColl["nextEventTimeSpan"],inputedBalls.__len__(),inputedBalls.__len__())
-        #===========================================================================
-        if(nextColl["eventBallA"]!=nextColl["eventBallB"]):
-            UpdateTimeTable(inputedBalls,nextColl["eventBallA"],containerR)
-        UpdateTimeTable(inputedBalls,nextColl["eventBallB"],containerR)
-        #===========================================================================
 
         print("time of event: " + str(currentTime))
         #===========================================================================
         if(nextColl["eventBallA"]!=nextColl["eventBallB"]):
             print("colliding " + inputedBalls[nextColl["eventBallA"]]._name + " " + inputedBalls[nextColl["eventBallB"]]._name)
         else:
-            print( "colliding " + inputedBalls[nextColl["eventBallA"]]._name + " " + "container")
+            print( "reflecting " + inputedBalls[nextColl["eventBallA"]]._name)
         #===========================================================================
-        inputedBalls[nextColl["eventBallA"]].PrintOutInfo()
-        inputedBalls[nextColl["eventBallB"]].PrintOutInfo()
+        for i in inputedBalls:
+            if(i._life<=0):continue
+            i.PrintOutInfo()
         print("energy: "+str(GetSystemEnergy(inputedBalls)))
         momentum = GetSystemMomentum(inputedBalls)
         print("momentum:" + str(tuple(momentum)))
+
+        print("")
+        if (inputedBalls[nextColl["eventBallA"]]._life==1 or inputedBalls[nextColl["eventBallB"]]._life==1):
+            print("disappear",end=" ")
+            if(nextColl["eventBallA"]!=nextColl["eventBallB"]):
+                if(inputedBalls[nextColl["eventBallA"]]._life==1):
+                    print(inputedBalls[nextColl["eventBallA"]]._name)
+                
+                if(inputedBalls[nextColl["eventBallB"]]._life==1):
+                    print(inputedBalls[nextColl["eventBallB"]]._name)
+                
+            
+            else:
+                if(inputedBalls[nextColl["eventBallA"]]._life==1):
+                    print(inputedBalls[nextColl["eventBallA"]]._name)
+                
+            
+            print("")
+        
+        print("")
+
+        inputedBalls[nextColl["eventBallA"]]._life-=1
+        if(nextColl["eventBallA"]!=nextColl["eventBallB"]):
+            inputedBalls[nextColl["eventBallB"]]._life-=1
+        
+        #===========================================================================
+        TimePass(nextColl["nextEventTimeSpan"],inputedBalls.__len__(),inputedBalls.__len__())
+        if(nextColl["eventBallA"]!=nextColl["eventBallB"]):
+            UpdateTimeTable(inputedBalls,nextColl["eventBallA"],containerR)
+        UpdateTimeTable(inputedBalls,nextColl["eventBallB"],containerR)
+        #===========================================================================
         GetNextBallsCollTime(inputedBalls.__len__(),nextColl)
         
 pass
