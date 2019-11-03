@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 class Ball:
     _s = np.array([])
     _v = np.array([])
@@ -31,7 +32,7 @@ class Ball:
         self._v   = self._v    - (self._s  *  (2 * ( np.dot(self._v,self._s) / np.dot(self._s,self._s))))
         self._life -=1
     pass
-    #Calcuate Collision time of this ball and conatiner in specific radius
+    #Calcuate Collision time of this ball and containerR in specific radius
     def PredictContainerCollision(self, containerRadius):
         container = Ball(0,0,0,0,0,0,-containerRadius,0,"container",1)
         container._r = - containerRadius
@@ -139,29 +140,69 @@ def GetSystemMomentum(balls):
         if(balls[i]._life>0):
             momentum = momentum + np.dot(balls[i]._v , balls[i]._m)
     return momentum
+
+def correctParFunction(wrongPars):
+    for i in range(len(wrongPars)):
+        p1 = 0
+        p2 = 2
+        while p2 < len(wrongPars[i])-1:
+            temp = wrongPars[i][p1]
+            wrongPars[i][p1] = wrongPars[i][p2]
+            wrongPars[i][p2] = temp
+            p1 += 1
+            p2 += 1
+        temp = wrongPars[i][p1]
+        wrongPars[i][p1] = wrongPars[i][p1+1]
+        wrongPars[i][p1+1] = temp
+    return wrongPars
+
+
 def mainStep():
     global timeTable
     timeTable = {}
     inputedBalls=[]
-    conatinerR=0
     currentTime=0
     nextColl={
         "nextEventTimeSpan":0,
         "eventBallA":0,
         "eventBallB":0
     }
+    containerR = int(sys.argv[1])
+    maxBounceTime = int(sys.argv[2])
+    #containerR = 120
+    #maxBounceTime = 3
+    ##
+    print("Please enter the mass, radius, x/y/z position, x/y/z velocity and name of each sphere" \
+          + "\nWhen complete, use EOF / Ctrl-D to stop entering")
+    # 20 1  0 0 0    0 0 1 one
+    # 2  5  0 1 100  0 0 0 two
+    pars = sys.stdin.read()
+    pars_arr = pars.split()
+    ##
+    counter = 0
+    for par in pars_arr:
+        if (counter + 1) % 9 != 0:
+            pars_arr[counter] = int(par)
+        counter += 1
+    arrayOfallPars = []
+    numOfBalls = len(pars_arr) / 9
+    for i in range(int(numOfBalls)):
+        cur = pars_arr[i*9 : i*9+9]
+        arrayOfallPars.append(cur)
+    correctedPar = correctParFunction(arrayOfallPars)
+
+    for ball in range(int(numOfBalls)):
+        thisball = Ball(*correctedPar[ball],maxBounceTime)
+        inputedBalls.append(thisball)
+    ## one = Ball(0,0,0,0,0,1,1,20,"one",maxBounceTime)
+    ## two = Ball(0,1,100,0,0,0,1,2,"two",maxBounceTime)
+    ## inputedBalls.append(one)
+    ## inputedBalls.append(two)
+    ##containerR = 120
 
 
 
-    one = Ball(0,0,0,0,0,1,1,20,"one",3)
-    two = Ball(0,1,100,0,0,0,1,2,"two",3)
-    inputedBalls.append(one)
-    inputedBalls.append(two)
-    conatinerR = 120
-
-
-
-    InitTimeTable(inputedBalls,conatinerR)
+    InitTimeTable(inputedBalls,containerR)
     GetNextBallsCollTime(inputedBalls.__len__(),nextColl)
     while (nextColl["nextEventTimeSpan"] > 0):
         currentTime += nextColl["nextEventTimeSpan"]
@@ -174,8 +215,8 @@ def mainStep():
         TimePass(nextColl["nextEventTimeSpan"],inputedBalls.__len__(),inputedBalls.__len__())
         #===========================================================================
         if(nextColl["eventBallA"]!=nextColl["eventBallB"]):
-            UpdateTimeTable(inputedBalls,nextColl["eventBallA"],conatinerR)
-        UpdateTimeTable(inputedBalls,nextColl["eventBallB"],conatinerR)
+            UpdateTimeTable(inputedBalls,nextColl["eventBallA"],containerR)
+        UpdateTimeTable(inputedBalls,nextColl["eventBallB"],containerR)
         #===========================================================================
 
         print("time of event: " + str(currentTime))

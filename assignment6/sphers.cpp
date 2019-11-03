@@ -1,11 +1,22 @@
+// Copyright 2019 zhou shen zhoushen@bu.edu
+
 #include <iostream>
 #include <string>
 #include <math.h>
 #include <vector>
+#include <boost/algorithm/string.hpp>
+//sudo apt-get install libboost-dev
+
 #define EasyWay
+
+using std::cout;
+using std::cin;
+using std::cerr;
+using std::endl;
 using std::string;
 using std::vector;
 using namespace std;
+
 class Vector3D{
     private:
     public:
@@ -234,6 +245,7 @@ public:
     }
 #else
     void ContainerCollision(){
+        //auto y = Vector3D(0 ,0 ,0);
         auto temp_v   = _v    - (_s  *  (2 * ( (_v*_s) / (_s*_s))));
         _v = temp_v;
         _life--;
@@ -296,7 +308,7 @@ void InitTimeTable(vector<Ball>& balls,int number,int containerR){
 }
 void UpdateTimeTable(vector<Ball>& balls,int ballIndex,int number, int containerR){
     for (int i = 0; i < number; i++){
-        if(balls[i]._life<=0||balls[ballIndex]._life<=0){
+        if(balls[i]._life<=0 || balls[ballIndex]._life <= 0){
             timeTable[ballIndex][i]=-1;
             timeTable[i][ballIndex]=-1;
             continue;
@@ -354,6 +366,7 @@ void GetNextBallsCollTime(int number,int& ballA,int& ballB, double& time){
     }
     
 }
+
 double GetSystemEnergy(vector<Ball>& balls){
     double energy = 0;
     for(int i=0;i<balls.size();i++){
@@ -361,6 +374,7 @@ double GetSystemEnergy(vector<Ball>& balls){
             energy += balls.at(i).GetEnergy();
         }
     }
+
     return energy;
 }
 Vector3D GetSystemMomentum(vector<Ball>& balls){
@@ -373,61 +387,121 @@ Vector3D GetSystemMomentum(vector<Ball>& balls){
     return momentum;
 
 }
-int main(void){
-    vector<Ball> inputedBalls;
-    double conatinerR;
-    double currentTime=0;
-    double nextEventTimeSpan;
-    int eventBallA,eventBallB;
 
 
 
 
-    auto one = Ball(0,0,0,0,0,1,1,20,"one",2);
-    auto two = Ball(0,1,100,0,0,0,5,2,"two",2);
-    auto three = Ball(0,0,0,0,0,0,1,3,"three",2);
-    inputedBalls.push_back(one);
-    inputedBalls.push_back(two);
-    inputedBalls.push_back(three);
-    conatinerR = 120;
+
+int main(int argc, char **argv) {
+  // get container radius and life from arguments
+  int containerR = 0;
+  int life = 0;
+  // exclude argv bracket_left 0 bracket_right, since it is for the name of the program
+  for(int i = 1; i < argc; ++i){
+    if(i == 1){
+      containerR = stoi(argv[i]);  //atof(): convert string to double
+      //cout << *(argv+i) << "\n";
+    }
+    else if(i == 2){
+      life = stoi(argv[i]);
+    }
+    else{
+      cerr << *(argv+i) << ", Too many arguments" << "\n";
+      exit(0);  //program is terminated here
+    }
+  }
+
+  double currentTime = 0;
+  double nextEventTimeSpan;
+  int eventBallA, eventBallB;
+
+  // Ask user to type in parameters
+  cout << "Please enter the mass, radius, x/y/z position, x/y/z velocity" << endl;
+  cout << "and name of each sphere." <<endl;
+  cout << "When complete, use EOF / Ctrl-D to stop entering" << endl;
+
+  // Vector<> for balls
+  vector<Ball> inputedBalls; 
+
+  int lineLen = 0;
+  string thisBall;
+  while(getline(cin, thisBall)){
+    //get each element from thisBall
+    vector<string> line;
+
+    boost::split(line, thisBall, boost::is_any_of("\t "), boost::token_compress_on);
+
+    //check for invalid input
+    if(line.size() != 9){
+      cout << "invalid input" <<endl;
+      exit(0);
+    }
 
 
+    //cout << line[i] << endl;
+    string name = line[8];
+    double curMass = stod(line[0]);
+    double curRadius = stod(line[1]);
 
-    InitTimeTable(inputedBalls,inputedBalls.size(),conatinerR);
-    GetNextBallsCollTime(inputedBalls.size(),eventBallB,eventBallA,nextEventTimeSpan);
-    while (nextEventTimeSpan > 0){
-        currentTime += nextEventTimeSpan;
-        MoveAll(inputedBalls, nextEventTimeSpan);
-        //===========================================================================
-        if(eventBallA==eventBallB){
-            inputedBalls.at(eventBallA).ContainerCollision();
-        }
-        else{
-            inputedBalls.at(eventBallA).Collision(inputedBalls.at(eventBallB));
-        }
-        //===========================================================================
-        TimePass(nextEventTimeSpan,inputedBalls.size(),inputedBalls.size());
-        //===========================================================================
-        if(eventBallA!=eventBallB){
-            UpdateTimeTable(inputedBalls,eventBallA,inputedBalls.size(),conatinerR);
-        }
-        UpdateTimeTable(inputedBalls,eventBallB,inputedBalls.size(),conatinerR);
-        //===========================================================================
+    double posX = stod(line[2]);
+    double posY = stod(line[3]);
+    double posZ = stod(line[4]);
 
-        cout<< "time of event: " << currentTime << endl;
-        //===========================================================================
-        if(eventBallA!=eventBallB){
-            cout<< "colliding " << inputedBalls.at(eventBallA)._name << " " << inputedBalls.at(eventBallB)._name<<endl;
-        }else{
-            cout<< "colliding " << inputedBalls.at(eventBallA)._name << " " << "container"<<endl;
-        }
-        //===========================================================================
-        inputedBalls.at(eventBallA).PrintOutInfo();
-        inputedBalls.at(eventBallB).PrintOutInfo();
-        cout << "energy: "<<GetSystemEnergy(inputedBalls)<<endl;
-        auto momentum = GetSystemMomentum(inputedBalls);
-        cout <<"momentum: ("<<momentum._x <<"," <<momentum._y <<"," <<momentum._z <<")"<<endl;
-        GetNextBallsCollTime(inputedBalls.size(),eventBallB,eventBallA,nextEventTimeSpan);
+    double velX = stod(line[5]);
+    double velY = stod(line[6]);
+    double velZ = stod(line[7]);
+
+    //initialize each ball
+    auto ball = Ball(posX, posY, posZ, velX, velY, velZ, curRadius, curMass, name, life);
+    inputedBalls.push_back(ball);
+  }
+
+  cout<< "test" << endl;
+  InitTimeTable(inputedBalls,inputedBalls.size(),containerR);
+  cout<< "test2" << endl;
+  GetNextBallsCollTime(inputedBalls.size(),eventBallB,eventBallA,nextEventTimeSpan);
+
+  while (nextEventTimeSpan > 0){
+    currentTime += nextEventTimeSpan;
+    MoveAll(inputedBalls, nextEventTimeSpan);
+    //===========================================================================
+    if(eventBallA==eventBallB){
+      inputedBalls.at(eventBallA).ContainerCollision();
+    }
+    else{
+      inputedBalls.at(eventBallA).Collision(inputedBalls.at(eventBallB));
     }
     
+    //===========================================================================
+    TimePass(nextEventTimeSpan,inputedBalls.size(),inputedBalls.size());
+    //===========================================================================
+    if(eventBallA!=eventBallB){
+      UpdateTimeTable(inputedBalls,eventBallA,inputedBalls.size(),containerR);
+    }
+    UpdateTimeTable(inputedBalls,eventBallB,inputedBalls.size(),containerR);
+    //===========================================================================
+
+    cout<< "time of event: " << currentTime << endl;
+    //===========================================================================
+    if(eventBallA!=eventBallB){
+      cout<< "colliding " << inputedBalls.at(eventBallA)._name << " " << inputedBalls.at(eventBallB)._name<<endl;
+    }else{
+      cout<< "colliding " << inputedBalls.at(eventBallA)._name << " " << "container"<<endl;
+    }
+    
+    //===========================================================================
+    inputedBalls.at(eventBallA).PrintOutInfo();
+    inputedBalls.at(eventBallB).PrintOutInfo();
+    cout << "energy: "<<GetSystemEnergy(inputedBalls)<<endl;
+    auto momentum = GetSystemMomentum(inputedBalls);
+    cout <<"momentum: ("<<momentum._x <<"," <<momentum._y <<"," <<momentum._z <<")"<<endl;
+    GetNextBallsCollTime(inputedBalls.size(),eventBallB,eventBallA,nextEventTimeSpan);
+  }
+  
+
+  return 0;
 }
+
+
+
+
