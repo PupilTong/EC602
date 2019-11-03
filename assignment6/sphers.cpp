@@ -234,7 +234,6 @@ public:
     }
 #else
     void ContainerCollision(){
-        auto y = Vector3D(0 ,0 ,0);
         auto temp_v   = _v    - (_s  *  (2 * ( (_v*_s) / (_s*_s))));
         _v = temp_v;
         _life--;
@@ -253,7 +252,7 @@ public:
         double c = (x._s - y._s).Pow2() - ((x._r+ y._r)*(x._r+ y._r));
         double b2mines4ac = b*b - 4*a*c;
         double t1,t2;
-        if((b > 0 && !isContainer) || b2mines4ac < 0|| a == 0){
+        if((b >= 0 && !isContainer) || b2mines4ac < 0|| a == 0){
             return -1;
         }
         else{
@@ -273,7 +272,7 @@ public:
     }
 };
 vector<vector<double>> timeTable;
-int InitTimeTable(vector<Ball>& balls,int number,int containerR){
+void InitTimeTable(vector<Ball>& balls,int number,int containerR){
     timeTable = vector<vector<double>>();
     timeTable.resize(number);
     for(int i=0;i<number;i++)timeTable[i].resize(i+1);
@@ -297,7 +296,7 @@ int InitTimeTable(vector<Ball>& balls,int number,int containerR){
 }
 void UpdateTimeTable(vector<Ball>& balls,int ballIndex,int number, int containerR){
     for (int i = 0; i < number; i++){
-        if(balls[i]._life<=0){
+        if(balls[i]._life<=0||balls[ballIndex]._life<=0){
             timeTable[ballIndex][i]=-1;
             timeTable[i][ballIndex]=-1;
             continue;
@@ -326,7 +325,7 @@ void TimePass(double sub,int tableRow, int tableCol){
     }
 }
 void MoveAll(vector<Ball>& balls,double t){
-    for (int i = 0; i < balls.capacity(); i++)
+    for (int i = 0; i < balls.size(); i++)
     {
         balls.at(i).Move(t);
     }
@@ -357,15 +356,16 @@ void GetNextBallsCollTime(int number,int& ballA,int& ballB, double& time){
 }
 double GetSystemEnergy(vector<Ball>& balls){
     double energy = 0;
-    for(int i=0;i<balls.capacity();i++){
+    for(int i=0;i<balls.size();i++){
         if(balls.at(i)._life>0){
             energy += balls.at(i).GetEnergy();
         }
     }
+    return energy;
 }
 Vector3D GetSystemMomentum(vector<Ball>& balls){
     auto momentum = Vector3D();
-    for(int i=0;i<balls.capacity();i++){
+    for(int i=0;i<balls.size();i++){
         if(balls.at(i)._life>0){
             momentum = momentum + (balls.at(i)._v * balls.at(i)._m);
         }
@@ -383,16 +383,18 @@ int main(void){
 
 
 
-    auto one = Ball(0,0,0,0,0,1,1,20,"one",3);
-    auto two = Ball(0,1,100,0,0,0,1,2,"two",3);
+    auto one = Ball(0,0,0,0,0,1,1,20,"one",2);
+    auto two = Ball(0,1,100,0,0,0,5,2,"two",2);
+    auto three = Ball(0,0,0,0,0,0,1,3,"three",2);
     inputedBalls.push_back(one);
     inputedBalls.push_back(two);
+    inputedBalls.push_back(three);
     conatinerR = 120;
 
 
 
-    InitTimeTable(inputedBalls,inputedBalls.capacity(),conatinerR);
-    GetNextBallsCollTime(inputedBalls.capacity(),eventBallB,eventBallA,nextEventTimeSpan);
+    InitTimeTable(inputedBalls,inputedBalls.size(),conatinerR);
+    GetNextBallsCollTime(inputedBalls.size(),eventBallB,eventBallA,nextEventTimeSpan);
     while (nextEventTimeSpan > 0){
         currentTime += nextEventTimeSpan;
         MoveAll(inputedBalls, nextEventTimeSpan);
@@ -404,12 +406,12 @@ int main(void){
             inputedBalls.at(eventBallA).Collision(inputedBalls.at(eventBallB));
         }
         //===========================================================================
-        TimePass(nextEventTimeSpan,inputedBalls.capacity(),inputedBalls.capacity());
+        TimePass(nextEventTimeSpan,inputedBalls.size(),inputedBalls.size());
         //===========================================================================
         if(eventBallA!=eventBallB){
-            UpdateTimeTable(inputedBalls,eventBallA,inputedBalls.capacity(),conatinerR);
+            UpdateTimeTable(inputedBalls,eventBallA,inputedBalls.size(),conatinerR);
         }
-        UpdateTimeTable(inputedBalls,eventBallB,inputedBalls.capacity(),conatinerR);
+        UpdateTimeTable(inputedBalls,eventBallB,inputedBalls.size(),conatinerR);
         //===========================================================================
 
         cout<< "time of event: " << currentTime << endl;
@@ -425,7 +427,7 @@ int main(void){
         cout << "energy: "<<GetSystemEnergy(inputedBalls)<<endl;
         auto momentum = GetSystemMomentum(inputedBalls);
         cout <<"momentum: ("<<momentum._x <<"," <<momentum._y <<"," <<momentum._z <<")"<<endl;
-        GetNextBallsCollTime(inputedBalls.capacity(),eventBallB,eventBallA,nextEventTimeSpan);
+        GetNextBallsCollTime(inputedBalls.size(),eventBallB,eventBallA,nextEventTimeSpan);
     }
     
 }
