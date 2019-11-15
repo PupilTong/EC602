@@ -1,5 +1,9 @@
 import numpy as np
 import sys
+#epsilon = 0.00000000001
+epsilon = 0.000001
+precision = 4
+maxValidNumber = 1e+160
 class Ball:
     _s = np.array([])
     _v = np.array([])
@@ -34,12 +38,12 @@ class Ball:
         self._bounces +=1
     pass
     #Calcuate Collision time of this ball and containerR in specific radius
-    def PredictContainerCollision(self, containerRadius):
+    def PredictContainerCollision(self, containerRadius,antiDuplicateFlag):
         container = Ball(0,0,0,0,0,0,-containerRadius,0,"container",1)
         container._r = - containerRadius
-        return self.PredictCollision(x=self,y=container,isContainer=True)
+        return self.PredictCollision(x=self,y=container,antiDuplicate=antiDuplicateFlag,isContainer=True)
     #Calcuate Collision time of two balls
-    def PredictCollision(self,x,y,isContainer=False):
+    def PredictCollision(self,x,y,antiDuplicate,isContainer=False):
         a = float(np.sum(np.power(x._v - y._v,2)))
         b = float(2 * np.dot(x._v - y._v,x._s - y._s))
         c = float(np.sum(np.power(x._s - y._s,2)) - (x._r+ y._r)**2)
@@ -49,19 +53,31 @@ class Ball:
         else:
             t1 = (-b + b2mines4ac**0.5) /(2*a)
             t2 = (-b - b2mines4ac**0.5) /(2*a)
-            #t2 < t1
-            if (t1 < 0 and t2 < 0):
-                return -1#no answer
-            if t1<=0 :
-                t1=t2+1
-            if t2<=0 :
-                t2=t1+1
-            if t1<t2:
+            if(abs(t1)<epsilon):
+                t1=0
+            if(abs(t2)<epsilon):
+                t2=0
+            if(antiDuplicate):
+                if(t1<epsilon):#t1 inValid
+                    t1= maxValidNumber
+                if(t2<epsilon):#t2 inValid
+                    t2= maxValidNumber
+            else:
+                if(t1<-epsilon):#t1 inValid
+                    t1= maxValidNumber
+                if(t2<-epsilon):#t2 inValid
+                    t2= maxValidNumber
+            if(t1>=maxValidNumber and t2>=maxValidNumber):#both inValid
+                return -1#
+            if(t1<t2):
                 return t1
             else:
                 return t2
-    def PrintOutInfo(self):
-        print(self._name, " ", " m=" + str(self._m) + " R=" + str(self._r) + " p=" + str(tuple(self._s)) + "v=" + str(tuple(self._v)),"bounces=",str(self._bounces))
+
+    def PrintOutInfo(self):      
+        #print(self._name," m=" + str(self._m) + " R=" + str(np.round(self._r,6)) + " p=" + str(tuple(np.round(self._s,precision))) + "v=" + str(tuple(np.round(self._v)))," bounces=",str(self._bounces))
+        print(self._name,"m=" + str(self._m) + " R=" + str(self._r) + " p=" + str(tuple(self._s)) + " v=" + str(tuple(self._v))," bounces=",str(self._bounces))
+    pass
     
     
 
@@ -74,13 +90,17 @@ def InitTimeTable(balls,containerR):
                 timeTable[str(i)+str(j)]=-1
                 continue
             if i==j:
-                timeTable[str(i)+str(j)] = balls[i].PredictContainerCollision(containerR)           
+                timeTable[str(i)+str(j)] = balls[i].PredictContainerCollision(containerR,antiDuplicateFlag=True)           
             else:
-                timeTable[str(i)+str(j)] = balls[i].PredictCollision(balls[i],balls[j])
+                timeTable[str(i)+str(j)] = balls[i].PredictCollision(balls[i],balls[j],antiDuplicate=True)
 pass
 
-def UpdateTimeTable(balls,ballIndex,containerR):
+def UpdateTimeTable(balls,ballIndex,containerR,periousBall):
     for i in range(balls.__len__()):
+        if(i==periousBall):
+            isAntiDuplicate=True
+        else:
+            isAntiDuplicate=False
         if balls[i]._life<=0 or balls[ballIndex]._life<=0:
             if i<ballIndex:
                 timeTable[str(ballIndex)+str(i)]=-1
@@ -88,12 +108,12 @@ def UpdateTimeTable(balls,ballIndex,containerR):
                 timeTable[str(i)+str(ballIndex)]=-1
             continue
         if i==ballIndex:
-            timeTable[str(i)+str(i)] = balls[i].PredictContainerCollision(containerR)
+            timeTable[str(i)+str(i)] = balls[i].PredictContainerCollision(containerR,antiDuplicateFlag=isAntiDuplicate)
         else:
             if(i <ballIndex):
-                timeTable[str(ballIndex)+str(i)] = balls[ballIndex].PredictCollision(balls[ballIndex],balls[i])
+                timeTable[str(ballIndex)+str(i)] = balls[ballIndex].PredictCollision(balls[ballIndex],balls[i],antiDuplicate=isAntiDuplicate)
             else:
-                timeTable[str(i)+str(ballIndex)] = balls[ballIndex].PredictCollision(balls[ballIndex],balls[i])
+                timeTable[str(i)+str(ballIndex)] = balls[ballIndex].PredictCollision(balls[ballIndex],balls[i],antiDuplicate=isAntiDuplicate)
 pass
 
 def TimePass(sub,tableRow,tableCol):
@@ -116,8 +136,8 @@ def GetNextBallsCollTime(number,next):
         for j in range(0,number):
             if(i<j):
                 continue
-            if(timeTable[str(i)+str(j)]>0):
-                if (next["nextEventTimeSpan"] < 0):
+            if(timeTable[str(i)+str(j)]>-epsilon):
+                if (next["nextEventTimeSpan"] <= -epsilon):
                     next["nextEventTimeSpan"] = timeTable[str(i)+str(j)]
                     next["eventBallA"] = i
                     next["eventBallB"] = j
@@ -168,11 +188,12 @@ def mainStep():
         "eventBallA":0,
         "eventBallB":0
     }
-    containerR = int(sys.argv[1])
+    containerR = float(sys.argv[1])
     maxBounceTime = int(sys.argv[2])
-    #containerR = 120
-    #maxBounceTime = 3
-    ##
+
+    #containerR = 2000
+    #maxBounceTime = 2
+
     print("Please enter the mass, radius, x/y/z position, x/y/z velocity and name of each sphere" \
           + "\nWhen complete, use EOF / Ctrl-D to stop entering")
     # 20 1  0 0 0    0 0 1 one
@@ -183,7 +204,7 @@ def mainStep():
     counter = 0
     for par in pars_arr:
         if (counter + 1) % 9 != 0:
-            pars_arr[counter] = int(par)
+            pars_arr[counter] = float(par)
         counter += 1
     arrayOfallPars = []
     numOfBalls = len(pars_arr) / 9
@@ -195,23 +216,18 @@ def mainStep():
     for ball in range(int(numOfBalls)):
         thisball = Ball(*correctedPar[ball],maxBounceTime)
         inputedBalls.append(thisball)
-    ## one = Ball(0,0,0,0,0,1,1,20,"one",maxBounceTime)
-    ## two = Ball(0,1,100,0,0,0,1,2,"two",maxBounceTime)
-    ## inputedBalls.append(one)
-    ## inputedBalls.append(two)
-    ##containerR = 120
 
 
     print("")
     print("Here are the initial conditions.")
-    print("universe radius ", str(containerR))
-    print("max collisions " ,str(maxBounceTime))
+    print("universe radius", str(containerR))
+    print("max collisions" ,str(maxBounceTime))
     for b in inputedBalls:
         b.PrintOutInfo()
 
-    print("energy: ",str(GetSystemEnergy(inputedBalls)))
+    print("energy:",str(GetSystemEnergy(inputedBalls)))
     momentum = GetSystemMomentum(inputedBalls)
-    print("momentum: " ,str(momentum))
+    print("momentum:" ,str(tuple(momentum)))
     print("")
     print("Here are the events.")
     print("")
@@ -222,7 +238,7 @@ def mainStep():
 
     InitTimeTable(inputedBalls,containerR)
     GetNextBallsCollTime(inputedBalls.__len__(),nextColl)
-    while (nextColl["nextEventTimeSpan"] > 0):
+    while (nextColl["nextEventTimeSpan"] >= -epsilon):
         currentTime += nextColl["nextEventTimeSpan"]
         MoveAll(inputedBalls, nextColl["nextEventTimeSpan"])
         if(nextColl["eventBallA"]==nextColl["eventBallB"]):
@@ -231,7 +247,7 @@ def mainStep():
             inputedBalls[nextColl["eventBallA"]].Collision(inputedBalls[nextColl["eventBallB"]])
         #===========================================================================
 
-        print("time of event: " + str(currentTime))
+        print("time of event: " + str(round(currentTime,precision)))
         #===========================================================================
         if(nextColl["eventBallA"]!=nextColl["eventBallB"]):
             print("colliding " + inputedBalls[nextColl["eventBallA"]]._name + " " + inputedBalls[nextColl["eventBallB"]]._name)
@@ -241,29 +257,19 @@ def mainStep():
         for i in inputedBalls:
             if(i._life<=0):continue
             i.PrintOutInfo()
+        #print("energy: "+str(round(GetSystemEnergy(inputedBalls),precision)))
         print("energy: "+str(GetSystemEnergy(inputedBalls)))
         momentum = GetSystemMomentum(inputedBalls)
-        print("momentum:" + str(tuple(momentum)))
+        print("momentum: " + str(tuple(momentum)))
 
         print("")
-        if (inputedBalls[nextColl["eventBallA"]]._life==1 or inputedBalls[nextColl["eventBallB"]]._life==1):
-            print("disappear",end=" ")
-            if(nextColl["eventBallA"]!=nextColl["eventBallB"]):
-                if(inputedBalls[nextColl["eventBallA"]]._life==1):
-                    print(inputedBalls[nextColl["eventBallA"]]._name)
-                
-                if(inputedBalls[nextColl["eventBallB"]]._life==1):
-                    print(inputedBalls[nextColl["eventBallB"]]._name)
-                
-            
-            else:
-                if(inputedBalls[nextColl["eventBallA"]]._life==1):
-                    print(inputedBalls[nextColl["eventBallA"]]._name)
-                
-            
+        if(inputedBalls[nextColl["eventBallA"]]._life==1):
+            print("disappear",inputedBalls[nextColl["eventBallA"]]._name)
             print("")
-        
-        print("")
+        if(nextColl["eventBallA"]!=nextColl["eventBallB"]):
+            if(inputedBalls[nextColl["eventBallB"]]._life==1):
+                print("disappear",inputedBalls[nextColl["eventBallB"]]._name)
+                print("")
 
         inputedBalls[nextColl["eventBallA"]]._life-=1
         if(nextColl["eventBallA"]!=nextColl["eventBallB"]):
@@ -272,14 +278,15 @@ def mainStep():
         #===========================================================================
         TimePass(nextColl["nextEventTimeSpan"],inputedBalls.__len__(),inputedBalls.__len__())
         if(nextColl["eventBallA"]!=nextColl["eventBallB"]):
-            UpdateTimeTable(inputedBalls,nextColl["eventBallA"],containerR)
-        UpdateTimeTable(inputedBalls,nextColl["eventBallB"],containerR)
+            UpdateTimeTable(inputedBalls,nextColl["eventBallA"],containerR,nextColl["eventBallB"])
+        UpdateTimeTable(inputedBalls,nextColl["eventBallB"],containerR,nextColl["eventBallA"])
         #===========================================================================
         GetNextBallsCollTime(inputedBalls.__len__(),nextColl)
         
 pass
 if __name__ == "__main__":
     mainStep()
+
 
 
         

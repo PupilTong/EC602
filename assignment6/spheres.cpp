@@ -6,6 +6,8 @@
 //sudo apt-get install libboost-dev
 
 #define EasyWay
+#define epsilon 0.0001
+#define timeUpperLimit 1e+100
 
 using std::cerr;
 using std::cin;
@@ -232,6 +234,7 @@ public:
         _r = r;
         _m = m;
         _name = name;
+        _bounce = 0;
     }
     double GetEnergy()
     {
@@ -302,21 +305,21 @@ public:
     }
 #endif
     ///Calcuate Collision time of this ball and conatiner in specific radius
-    double PredictContainerCollision(double containerRadius)
+    double PredictContainerCollision(double containerRadius,bool antiDuplicate)
     {
         auto container = Ball("container");
         container._r = -containerRadius;
-        return PredictCollision(*this, container, true);
+        return PredictCollision(*this, container,antiDuplicate, true);
     }
     ///Calcuate Collision time of two balls
-    static double PredictCollision(Ball &x, Ball &y, bool isContainer = false)
+    static double PredictCollision(Ball &x, Ball &y,bool antiDuplicate, bool isContainer = false)
     {
         double a = (x._v - y._v).Pow2();
         double b = 2 * ((x._v - y._v) * (x._s - y._s));
         double c = (x._s - y._s).Pow2() - ((x._r + y._r) * (x._r + y._r));
         double b2mines4ac = b * b - 4 * a * c;
         double t1, t2;
-        if ((b >= 0 && !isContainer) || b2mines4ac < 0 || a == 0)
+        if ((b >=0 && !isContainer) || b2mines4ac < 0 || a == 0)
         {
             return -1;
         }
@@ -324,26 +327,28 @@ public:
         {
             t1 = (-b + sqrt(b2mines4ac)) / (2 * a);
             t2 = (-b - sqrt(b2mines4ac)) / (2 * a);
-            //t2 < t1
-            if (t1 < 0 && t2 < 0)
-            {
-                return -1; //no answer
+            if(abs(t1)<epsilon)t1=0;
+            if(abs(t2)<epsilon)t2=0;
+            if(antiDuplicate){
+                if(t1<epsilon)t1=timeUpperLimit;//inValid
+                if(t2<epsilon)t2=timeUpperLimit;//inValid
             }
-            if (t1 <= 0)
-                t1 = t2 + 1;
-            if (t2 <= 0)
-                t2 = t1 + 1;
-            return t1 < t2 ? t1 : t2;
+            else{
+                if(t1<=-epsilon)t1=timeUpperLimit;//inValid
+                if(t2<=-epsilon)t2=timeUpperLimit;//inValid
+            }
+            if(t1>=timeUpperLimit && t2>=timeUpperLimit)return -1;
+            return t1<t2?t1:t2;
         }
     }
     void PrintOutInfo()
     {
         cout << _name << " m=" << _m << " R=" << _r << " p=(" << _s._x << "," << _s._y << "," << _s._z << ") v=(" << _v._x << "," << _v._y << "," << _v._z << ")"
-             << "bounces=" << _bounce << endl;
+             << " bounces=" << _bounce << endl;
     }
 };
 vector<vector<double>> timeTable;
-void InitTimeTable(vector<Ball> &balls, int number, int containerR)
+void InitTimeTable(vector<Ball> &balls, int number, double containerR)
 {
     timeTable = vector<vector<double>>();
     timeTable.resize(number);
@@ -362,38 +367,44 @@ void InitTimeTable(vector<Ball> &balls, int number, int containerR)
             }
             if (i == j)
             {
-                timeTable[i][j] = balls[i].PredictContainerCollision(containerR);
+                timeTable[i][j] = balls[i].PredictContainerCollision(containerR,true);
             }
             else
             {
-                timeTable[i][j] = balls[i].PredictCollision(balls[i], balls[j]);
+                timeTable[i][j] = balls[i].PredictCollision(balls[i], balls[j],true);
             }
         }
     }
 }
-void UpdateTimeTable(vector<Ball> &balls, int ballIndex, int number, int containerR)
+void UpdateTimeTable(vector<Ball> &balls, int ballIndex, double containerR,int previousBall)
 {
-    for (int i = 0; i < number; i++)
+    bool antiDuplicate;
+    for (int i = 0; i < balls.size(); i++)
     {
+        antiDuplicate = (i==previousBall);
         if (balls[i]._life <= 0 || balls[ballIndex]._life <= 0)
         {
-            timeTable[ballIndex][i] = -1;
-            timeTable[i][ballIndex] = -1;
+            if(i<ballIndex){
+                timeTable[ballIndex][i] = -1;
+            }
+            else{
+                timeTable[i][ballIndex] = -1;
+            }
             continue;
         };
         if (i == ballIndex)
         {
-            timeTable[i][i] = balls.at(i).PredictContainerCollision(containerR);
+            timeTable[i][i] = balls.at(i).PredictContainerCollision(containerR,antiDuplicate);
         }
         else
         {
             if (i < ballIndex)
             {
-                timeTable[ballIndex][i] = balls.at(ballIndex).PredictCollision(balls.at(ballIndex), balls.at(i));
+                timeTable[ballIndex][i] = balls.at(ballIndex).PredictCollision(balls.at(ballIndex), balls.at(i),antiDuplicate);
             }
             else
             {
-                timeTable[i][ballIndex] = balls.at(ballIndex).PredictCollision(balls.at(ballIndex), balls.at(i));
+                timeTable[i][ballIndex] = balls.at(ballIndex).PredictCollision(balls.at(ballIndex), balls.at(i),antiDuplicate);
             }
         }
     }
@@ -429,9 +440,9 @@ void GetNextBallsCollTime(int number, int &ballA, int &ballB, double &time)
         {
             if (i < j)
                 continue;
-            if (timeTable[i][j] > 0)
+            if (timeTable[i][j] > -epsilon)
             {
-                if (time < 0)
+                if (time <= -epsilon)
                 {
                     time = timeTable[i][j];
                     ballA = i;
@@ -480,14 +491,14 @@ Vector3D GetSystemMomentum(vector<Ball> &balls)
 int main(int argc, char **argv)
 {
     // get container radius and life from arguments
-    int containerR = 0;
+    double containerR = 0;
     int life = 0;
     // exclude argv bracket_left 0 bracket_right, since it is for the name of the program
     for (int i = 1; i < argc; ++i)
     {
         if (i == 1)
         {
-            containerR = stoi(argv[i]); //atof(): convert string to double
+            containerR = stof(argv[i]); //atof(): convert string to double
                                         //cout << *(argv+i) << "\n";
         }
         else if (i == 2)
@@ -501,6 +512,12 @@ int main(int argc, char **argv)
             exit(0); //program is terminated here
         }
     }
+
+//------------------------debug
+//containerR = 2000;
+//life=5;
+
+//-----------------------debug
 
     double currentTime = 0;
     double nextEventTimeSpan;
@@ -516,7 +533,7 @@ int main(int argc, char **argv)
 
     int lineLen = 0;
     string thisBall;
-    while (getline(cin, thisBall))
+    while (true)
     {
         //get each element from thisBall
         //vector<string> line;
@@ -528,10 +545,11 @@ int main(int argc, char **argv)
         //  cout << "invalid input" <<endl;
         //  exit(0);
         //}
-
         string ballMass, ballRadius, bPosX, bPosY, bPosZ, bVelX, bVelY, bVelZ, ballName;
 
         cin >> ballMass >> ballRadius >> bPosX >> bPosY >> bPosZ >> bVelX >> bVelY >> bVelZ >> ballName;
+
+        if(not cin)break;
 
         string name = ballName;
         double curMass = stod(ballMass);
@@ -561,7 +579,9 @@ int main(int argc, char **argv)
         //initialize each ball
         auto ball = Ball(posX, posY, posZ, velX, velY, velZ, curRadius, curMass, name, life);
         inputedBalls.push_back(ball);
+        if(not cin.good())break;
     }
+    if(!cin.eof())return 0;
     cout<<endl;
     cout << "Here are the initial conditions." << endl;
     cout << "universe radius " << containerR << endl;
@@ -580,7 +600,7 @@ int main(int argc, char **argv)
     InitTimeTable(inputedBalls, inputedBalls.size(), containerR);
     GetNextBallsCollTime(inputedBalls.size(), eventBallB, eventBallA, nextEventTimeSpan);
 
-    while (nextEventTimeSpan > 0)
+    while (nextEventTimeSpan >= -epsilon)
     {
         currentTime += nextEventTimeSpan;
         MoveAll(inputedBalls, nextEventTimeSpan);
@@ -616,24 +636,17 @@ int main(int argc, char **argv)
         cout << "momentum: (" << momentum._x << "," << momentum._y << "," << momentum._z << ")" << endl;
         //===========================================================================
         cout<<endl;
-        if(inputedBalls.at(eventBallA)._life==1||inputedBalls.at(eventBallB)._life==1){
-            cout<<"disappear ";
-            if(eventBallB!=eventBallA){
-                if(inputedBalls.at(eventBallA)._life==1){
-                    cout<<inputedBalls.at(eventBallA)._name <<" ";
-                }
-                if(inputedBalls.at(eventBallB)._life==1){
-                    cout<<inputedBalls.at(eventBallB)._name <<" ";
-                }
-            }
-            else{
-                if(inputedBalls.at(eventBallA)._life==1){
-                    cout<<inputedBalls.at(eventBallA)._name<<" ";
-                }
-            }
+
+        if(inputedBalls.at(eventBallA)._life==1){
+            cout<<"disappear "<<inputedBalls.at(eventBallA)._name <<endl;
             cout<<endl;
         }
-        cout<<endl;
+        if(eventBallB!=eventBallA){
+            if(inputedBalls.at(eventBallB)._life==1){
+                cout<<"disappear "<<inputedBalls.at(eventBallB)._name<<endl;
+                cout<<endl;
+            }
+        }
 
 
 
@@ -644,9 +657,9 @@ int main(int argc, char **argv)
         //===========================================================================
         if (eventBallA != eventBallB)
         {
-            UpdateTimeTable(inputedBalls, eventBallA, inputedBalls.size(), containerR);
+            UpdateTimeTable(inputedBalls, eventBallA, containerR,eventBallB);
         }
-        UpdateTimeTable(inputedBalls, eventBallB, inputedBalls.size(), containerR);
+        UpdateTimeTable(inputedBalls, eventBallB, containerR,eventBallA);
         //===========================================================================
         GetNextBallsCollTime(inputedBalls.size(), eventBallB, eventBallA, nextEventTimeSpan);
     }
